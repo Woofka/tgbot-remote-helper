@@ -1,4 +1,4 @@
-venv
-.idea
-config.py
-log.txt
+/venv
+/.idea
+
+/tgbot/log.txt
