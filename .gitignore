@@ -1,4 +1,6 @@
 venv
 .idea
+
 config.py
 log.txt
+bot_example.py
