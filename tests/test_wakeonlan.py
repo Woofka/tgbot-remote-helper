@@ -1,6 +1,6 @@
 import unittest
 
-from bot_utils import parse_mac_addr, form_magic_packet
+from bot_utils import parse_mac_addr, form_magic_packet, mac_bytes_to_str
 
 
 class TestParseMacAddr(unittest.TestCase):
@@ -58,6 +58,14 @@ class TestFormMagicPacket(unittest.TestCase):
         mac = b'\x1a\xb2\xc3\n\xff\x99'
         result = form_magic_packet(mac)
         expected = b'\xff\xff\xff\xff\xff\xff\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99\x1a\xb2\xc3\n\xff\x99'
+        self.assertEqual(expected, result)
+
+
+class TestMacBytesToStr(unittest.TestCase):
+    def test_form_magic_packet(self):
+        mac = b'\x1a\xb2\xc3\x0a\xff\x99'
+        result = mac_bytes_to_str(mac)
+        expected = '1a:b2:c3:0a:ff:99'
         self.assertEqual(expected, result)
 
 

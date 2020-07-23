@@ -10,6 +10,7 @@ from aiogram.types import ParseMode
 from aiogram.utils import executor
 
 from config import BOT_TOKEN, ALLOWED_IDS
+from bot_utils import *
 
 
 logging.basicConfig(
@@ -61,11 +62,34 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
 async def cmd_wakeonlan(message: types.Message):
     logging.info(f'Command \"/wakeonlan\" from user {message.from_user.id}')
 
+    if message.from_user.id not in ALLOWED_IDS:
+        await message.answer('Sorry. You have no permission to use this command')
+        return
+
     cmd_args = message.get_args()
-    if cmd_args == '' or len(cmd_args) > 20:
-        await message.answer("[WIP] cmd_args == ''")
-    else:
-        pass
+    if cmd_args != '' and len(cmd_args) <= 20:
+        mac = parse_mac_addr(cmd_args)
+        if mac is not None:
+            wake_on_lan(mac)
+            await message.answer(
+                md.text('Wake\-on\-LAN packet were sent to', md.code(mac_bytes_to_str(mac))),
+                parse_mode=ParseMode.MARKDOWN_V2
+            )
+            return
+
+    await message.answer(
+        md.text(
+            md.text('To use Wake\-on\-LAN send me next message:'),
+            md.code('/wakeonlan <mac>'),
+            md.text('Where `<mac>` is MAC address of computer you want to turn on\.'),
+            md.text('MAC should be written in one of the following ways:'),
+            md.text('\-', md.code('11:22:33:aa:bb:cc')),
+            md.text('\-', md.code('11.22.33.aa.bb.cc')),
+            md.text('\-', md.code('11-22-33-aa-bb-cc')),
+            sep='\n'
+        ),
+        parse_mode=ParseMode.MARKDOWN_V2
+    )
 
 
 if __name__ == '__main__':
