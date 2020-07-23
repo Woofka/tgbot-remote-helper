@@ -9,7 +9,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import ParseMode
 from aiogram.utils import executor
 
-from tgbot.config import BOT_TOKEN, ALLOWED_IDS
+from config import BOT_TOKEN, ALLOWED_IDS
 
 
 logging.basicConfig(
