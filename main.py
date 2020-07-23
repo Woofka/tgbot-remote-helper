@@ -57,5 +57,16 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
     await message.answer('Cancelled. Anything else I can do for you?', reply_markup=types.ReplyKeyboardRemove())
 
 
+@dp.message_handler(commands='wakeonlan')
+async def cmd_wakeonlan(message: types.Message):
+    logging.info(f'Command \"/wakeonlan\" from user {message.from_user.id}')
+
+    cmd_args = message.get_args()
+    if cmd_args == '' or len(cmd_args) > 20:
+        await message.answer("[WIP] cmd_args == ''")
+    else:
+        pass
+
+
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
