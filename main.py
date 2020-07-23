@@ -31,20 +31,20 @@ async def cmd_start(message: types.Message):
 
 
 @dp.message_handler(commands='help')
-async def cmd_start(message: types.Message):
+async def cmd_help(message: types.Message):
     logging.info(f'Command \"/help\" from user {message.from_user.id}')
     await message.answer("[WIP] Help")
 
 
 @dp.message_handler(commands='settings')
-async def cmd_start(message: types.Message):
+async def cmd_settings(message: types.Message):
     logging.info(f'Command \"/settings\" from user {message.from_user.id}')
     await message.answer("[WIP] Settings")
 
 
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
+async def cmd_cancel(message: types.Message, state: FSMContext):
     logging.info(f'Command \"/cancel\" from user {message.from_user.id}')
 
     current_state = await state.get_state()
