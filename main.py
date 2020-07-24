@@ -72,7 +72,7 @@ async def cmd_wakeonlan(message: types.Message):
         if mac is not None:
             wake_on_lan(mac)
             await message.answer(
-                md.text('Wake\-on\-LAN packet were sent to', md.code(mac_bytes_to_str(mac))),
+                md.text('Wake\-on\-LAN packet was sent to', md.code(mac_bytes_to_str(mac))),
                 parse_mode=ParseMode.MARKDOWN_V2
             )
             return
