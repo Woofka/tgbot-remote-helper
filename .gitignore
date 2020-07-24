@@ -1,6 +1,8 @@
 venv
 .idea
+__pycache__
 
 config.py
 log.txt
 bot_example.py
+test.py
