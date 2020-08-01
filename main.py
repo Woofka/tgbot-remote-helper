@@ -1,5 +1,6 @@
 import logging
-import threading
+import asyncio
+import datetime
 
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
@@ -10,16 +11,13 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import ParseMode
 from aiogram.utils import executor
 
+from logger import setup_logger
 from config import BOT_TOKEN, ALLOWED_IDS, MAIN_MAC
-from bot_utils import mac_bytes_to_str, parse_mac_addr, wake_on_lan, ask_status, ask_uptime, protocol_handler,\
-    status_observer
+from bot_utils import wake_on_lan, ask_uptime, protocol_handler, status_observer, get_last_status
 
 
-logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='log.txt',
-    level=logging.INFO
-)
+setup_logger()
+log = logging.getLogger('logger')
 
 
 bot = Bot(token=BOT_TOKEN)
@@ -29,40 +27,40 @@ dp = Dispatcher(bot, storage=storage)
 
 @dp.message_handler(commands='start')
 async def cmd_start(message: types.Message):
-    logging.info(f'Command \"/start\" from user {message.from_user.id}')
+    log.info(f'Command \"/start\" from user {message.from_user.id}')
     await message.answer("[WorkInProgress] Start")
 
 
 @dp.message_handler(commands='help')
 async def cmd_help(message: types.Message):
-    logging.info(f'Command \"/help\" from user {message.from_user.id}')
+    log.info(f'Command \"/help\" from user {message.from_user.id}')
     await message.answer("[WorkInProgress] Help")
 
 
 @dp.message_handler(commands='settings')
 async def cmd_settings(message: types.Message):
-    logging.info(f'Command \"/settings\" from user {message.from_user.id}')
+    log.info(f'Command \"/settings\" from user {message.from_user.id}')
     await message.answer("[WorkInProgress] Settings")
 
 
 @dp.message_handler(state='*', commands='cancel')
 @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
 async def cmd_cancel(message: types.Message, state: FSMContext):
-    logging.info(f'Command \"/cancel\" from user {message.from_user.id}')
+    log.info(f'Command \"/cancel\" from user {message.from_user.id}')
 
     current_state = await state.get_state()
     if current_state is None:
         await message.answer('No active command to cancel')
         return
 
-    logging.info(f'Cancelling state {current_state}')
+    log.info(f'Cancelling state {current_state}')
     await state.finish()
     await message.answer('Cancelled. Anything else I can do for you?', reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(commands='wakeonlan')
 async def cmd_wakeonlan(message: types.Message):
-    logging.info(f'Command \"/wakeonlan\" from user {message.from_user.id}')
+    log.info(f'Command \"/wakeonlan\" from user {message.from_user.id}')
 
     if message.from_user.id not in ALLOWED_IDS:
         await message.answer('Sorry. You have no permission to use this command')
@@ -77,7 +75,7 @@ async def cmd_wakeonlan(message: types.Message):
 
 @dp.message_handler(commands='uptime')
 async def cmd_uptime(message: types.Message):
-    logging.info(f'Command \"/uptime\" from user {message.from_user.id}')
+    log.info(f'Command \"/uptime\" from user {message.from_user.id}')
 
     if message.from_user.id not in ALLOWED_IDS:
         await message.answer('Sorry. You have no permission to use this command')
@@ -92,22 +90,22 @@ async def cmd_uptime(message: types.Message):
 
 @dp.message_handler(commands='status')
 async def cmd_status(message: types.Message):
-    logging.info(f'Command \"/status\" from user {message.from_user.id}')
+    log.info(f'Command \"/status\" from user {message.from_user.id}')
 
     if message.from_user.id not in ALLOWED_IDS:
         await message.answer('Sorry. You have no permission to use this command')
         return
-    # TODO: arp -a works like cache, we can't be sure, that device is available
-    if not ask_status(MAIN_MAC, message.from_user.id.id, message.chat.id):
-        await message.answer(
-            md.text('Device', md.code(MAIN_MAC), 'is not available now'),
-            parse_mode=ParseMode.MARKDOWN_V2
-        )
+
+    status, time = get_last_status()
+    info = 'online' if status else 'offline'
+    time = datetime.datetime.fromtimestamp(time)
+    await message.answer(f'Device was {info} at {time}')
 
 
 if __name__ == '__main__':
-    th_protocol_handler = threading.Thread(target=protocol_handler, args=[bot])
-    th_status_observer = threading.Thread(target=status_observer)
-    th_protocol_handler.start()
-    th_status_observer.start()
+    log.info('Starting protocol handler')
+    asyncio.ensure_future(protocol_handler(bot))
+    log.info('Starting status observer')
+    asyncio.ensure_future(status_observer(bot))
+    log.info('Starting bot')
     executor.start_polling(dp, skip_updates=True)
