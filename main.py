@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
@@ -9,8 +10,9 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import ParseMode
 from aiogram.utils import executor
 
-from config import BOT_TOKEN, ALLOWED_IDS
-from bot_utils import *
+from config import BOT_TOKEN, ALLOWED_IDS, MAIN_MAC
+from bot_utils import mac_bytes_to_str, parse_mac_addr, wake_on_lan, ask_status, ask_uptime, protocol_handler,\
+    status_observer
 
 
 logging.basicConfig(
@@ -28,19 +30,19 @@ dp = Dispatcher(bot, storage=storage)
 @dp.message_handler(commands='start')
 async def cmd_start(message: types.Message):
     logging.info(f'Command \"/start\" from user {message.from_user.id}')
-    await message.answer("[WIP] Start")
+    await message.answer("[WorkInProgress] Start")
 
 
 @dp.message_handler(commands='help')
 async def cmd_help(message: types.Message):
     logging.info(f'Command \"/help\" from user {message.from_user.id}')
-    await message.answer("[WIP] Help")
+    await message.answer("[WorkInProgress] Help")
 
 
 @dp.message_handler(commands='settings')
 async def cmd_settings(message: types.Message):
     logging.info(f'Command \"/settings\" from user {message.from_user.id}')
-    await message.answer("[WIP] Settings")
+    await message.answer("[WorkInProgress] Settings")
 
 
 @dp.message_handler(state='*', commands='cancel')
@@ -66,31 +68,46 @@ async def cmd_wakeonlan(message: types.Message):
         await message.answer('Sorry. You have no permission to use this command')
         return
 
-    cmd_args = message.get_args()
-    if cmd_args != '' and len(cmd_args) <= 20:
-        mac = parse_mac_addr(cmd_args)
-        if mac is not None:
-            wake_on_lan(mac)
-            await message.answer(
-                md.text('Wake\-on\-LAN packet was sent to', md.code(mac_bytes_to_str(mac))),
-                parse_mode=ParseMode.MARKDOWN_V2
-            )
-            return
-
+    wake_on_lan(MAIN_MAC)
     await message.answer(
-        md.text(
-            md.text('To use Wake\-on\-LAN send me next message:'),
-            md.code('/wakeonlan <mac>'),
-            md.text('Where `<mac>` is MAC address of computer you want to turn on\.'),
-            md.text('MAC should be written in one of the following ways:'),
-            md.text('\-', md.code('11:22:33:aa:bb:cc')),
-            md.text('\-', md.code('11.22.33.aa.bb.cc')),
-            md.text('\-', md.code('11-22-33-aa-bb-cc')),
-            sep='\n'
-        ),
+        md.text('Wake\-on\-LAN packet was sent to', md.code(MAIN_MAC)),
         parse_mode=ParseMode.MARKDOWN_V2
     )
 
 
+@dp.message_handler(commands='uptime')
+async def cmd_uptime(message: types.Message):
+    logging.info(f'Command \"/uptime\" from user {message.from_user.id}')
+
+    if message.from_user.id not in ALLOWED_IDS:
+        await message.answer('Sorry. You have no permission to use this command')
+        return
+
+    if not ask_uptime(MAIN_MAC, message.from_user.id):
+        await message.answer(
+            md.text('Device', md.code(MAIN_MAC), 'is not available now'),
+            parse_mode=ParseMode.MARKDOWN_V2
+        )
+
+
+@dp.message_handler(commands='status')
+async def cmd_status(message: types.Message):
+    logging.info(f'Command \"/status\" from user {message.from_user.id}')
+
+    if message.from_user.id not in ALLOWED_IDS:
+        await message.answer('Sorry. You have no permission to use this command')
+        return
+
+    if not ask_status(MAIN_MAC, message.from_user.id):
+        await message.answer(
+            md.text('Device', md.code(MAIN_MAC), 'is not available now'),
+            parse_mode=ParseMode.MARKDOWN_V2
+        )
+
+
 if __name__ == '__main__':
+    th_protocol_handler = threading.Thread(target=protocol_handler)
+    th_status_observer = threading.Thread(target=status_observer)
+    th_protocol_handler.start()
+    th_status_observer.start()
     executor.start_polling(dp, skip_updates=True)
