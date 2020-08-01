@@ -82,8 +82,8 @@ async def cmd_uptime(message: types.Message):
     if message.from_user.id not in ALLOWED_IDS:
         await message.answer('Sorry. You have no permission to use this command')
         return
-
-    if not ask_uptime(MAIN_MAC, message.from_user.id):
+    # TODO: arp -a works like cache, we can't be sure, that device is available
+    if not ask_uptime(MAIN_MAC, message.from_user.id, message.chat.id):
         await message.answer(
             md.text('Device', md.code(MAIN_MAC), 'is not available now'),
             parse_mode=ParseMode.MARKDOWN_V2
@@ -97,8 +97,8 @@ async def cmd_status(message: types.Message):
     if message.from_user.id not in ALLOWED_IDS:
         await message.answer('Sorry. You have no permission to use this command')
         return
-
-    if not ask_status(MAIN_MAC, message.from_user.id):
+    # TODO: arp -a works like cache, we can't be sure, that device is available
+    if not ask_status(MAIN_MAC, message.from_user.id.id, message.chat.id):
         await message.answer(
             md.text('Device', md.code(MAIN_MAC), 'is not available now'),
             parse_mode=ParseMode.MARKDOWN_V2
@@ -106,7 +106,7 @@ async def cmd_status(message: types.Message):
 
 
 if __name__ == '__main__':
-    th_protocol_handler = threading.Thread(target=protocol_handler)
+    th_protocol_handler = threading.Thread(target=protocol_handler, args=[bot])
     th_status_observer = threading.Thread(target=status_observer)
     th_protocol_handler.start()
     th_status_observer.start()

@@ -6,6 +6,7 @@ from protocol import Protocol
 import datetime
 import time
 
+from config import ERROR_ID
 
 BCAST = '<broadcast>'
 WAKEONLAN_PORT = 9
@@ -48,20 +49,20 @@ def wake_on_lan(mac_addr):
     sock_proto.sendto(packet, (BCAST, WAKEONLAN_PORT))
 
 
-def ask_status(mac_addr, user_id):
+def ask_status(mac_addr, user_id, chat_id):
     ip = _get_lan_ip(mac_addr)
     if ip is not None:
-        packet = Protocol(Protocol.CODE_IFALIVE, user_id).encode()
+        packet = Protocol(Protocol.CODE_IFALIVE, user_id, chat_id).encode()
         sock_proto.sendto(packet, (ip, PROTO_PORT_SERVER))
         return True
     else:
         return False
 
 
-def ask_uptime(mac_addr, user_id):
+def ask_uptime(mac_addr, user_id, chat_id):
     ip = _get_lan_ip(mac_addr)
     if ip is not None:
-        packet = Protocol(Protocol.CODE_ASKSTARTTIME, user_id).encode()
+        packet = Protocol(Protocol.CODE_ASKSTARTTIME, user_id, chat_id).encode()
         sock_proto.sendto(packet, (ip, PROTO_PORT_SERVER))
         return True
     else:
@@ -79,7 +80,7 @@ def _get_lan_ip(mac_addr):
             return ip
 
 
-def protocol_handler():
+def protocol_handler(bot):
     time.sleep(3)
     while True:
         try:
@@ -90,32 +91,27 @@ def protocol_handler():
 
             if packet.code == Protocol.CODE_IFALIVE:
                 if packet.uid == 0:
-
                     pass  # TODO remember that it is alive
                 else:
-                    # print('status to User')
-                    pass  # TODO send message about status
+                    bot.send_message(packet.cid, 'Device is running')
+                    # TODO send message about status
 
             if packet.code == Protocol.CODE_STARTTIME:
                 startup_time = datetime.datetime.fromisoformat(packet.payload)
-                # print(f'startup time is: {startup_time}')
-                # TODO handle this info and send to user
+                bot.send_message(packet.cid, f'[WorkInProgress] Startup time: {startup_time}')
+                # TODO handle this info in the way I want
 
         except Exception as err:
-            print(f'Exception: err')
-            pass  # TODO send error report to admins
+            bot.send_message(ERROR_ID, f'protocol_handler ERROR - {err}')
 
 
 def handle_status():
+    # TODO: idk, somehow I have to handle it
     pass
 
 
 def status_observer():
-    packet = Protocol(Protocol.CODE_IFALIVE, 0).encode()
+    packet = Protocol(Protocol.CODE_IFALIVE, 0, 0).encode()
     while True:
         sock_proto.sendto(packet, (BCAST, PROTO_PORT_SERVER))
         time.sleep(5)
-
-
-if __name__ == '__main__':
-    _get_lan_ip(correct_mac('00:D8:61:D9:76:CE'))
