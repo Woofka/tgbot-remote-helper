@@ -12,8 +12,8 @@ from aiogram.types import ParseMode
 from aiogram.utils import executor
 
 from logger import setup_logger
-from config import BOT_TOKEN, ALLOWED_IDS, MAIN_MAC
-from bot_utils import wake_on_lan, ask_uptime, protocol_handler, status_observer, get_last_status
+from config import BOT_TOKEN, ALLOWED_IDS, MAC
+from bot_utils import wake_on_lan, ask_uptime, protocol_handler, status_observer, get_last_status, get_wan_ip
 
 
 setup_logger()
@@ -66,11 +66,12 @@ async def cmd_wakeonlan(message: types.Message):
         await message.answer('Sorry. You have no permission to use this command')
         return
 
-    wake_on_lan(MAIN_MAC)
-    await message.answer(
-        md.text('Wake\-on\-LAN packet was sent to', md.code(MAIN_MAC)),
-        parse_mode=ParseMode.MARKDOWN_V2
-    )
+    status, _ = get_last_status()
+    if not status:
+        wake_on_lan()
+        await message.answer('Wake-on-LAN packet was sent')
+    else:
+        await message.answer('Device is already online')
 
 
 @dp.message_handler(commands='uptime')
@@ -80,12 +81,12 @@ async def cmd_uptime(message: types.Message):
     if message.from_user.id not in ALLOWED_IDS:
         await message.answer('Sorry. You have no permission to use this command')
         return
-    # TODO: arp -a works like cache, we can't be sure, that device is available
-    if not ask_uptime(MAIN_MAC, message.from_user.id, message.chat.id):
-        await message.answer(
-            md.text('Device', md.code(MAIN_MAC), 'is not available now'),
-            parse_mode=ParseMode.MARKDOWN_V2
-        )
+
+    status, _ = get_last_status()
+    if status:
+        ask_uptime(message.from_user.id, message.chat.id)
+    else:
+        await message.answer('Device is offline')
 
 
 @dp.message_handler(commands='status')
@@ -97,9 +98,24 @@ async def cmd_status(message: types.Message):
         return
 
     status, time = get_last_status()
-    info = 'online' if status else 'offline'
-    time = datetime.datetime.fromtimestamp(time)
-    await message.answer(f'Device was {info} at {time}')
+    info = 'ONLINE' if status else 'OFFLINE'
+    time = datetime.datetime.fromtimestamp(time).__format__('%H:%M:%S  %d %h %Y')
+    await message.answer(f'Last known status  -  {info}  -  {time}')
+
+
+@dp.message_handler(commands='wanip')
+async def cmd_wanip(message: types.Message):
+    log.info(f'Command \"/wanip\" from user {message.from_user.id}')
+
+    if message.from_user.id not in ALLOWED_IDS:
+        await message.answer('Sorry. You have no permission to use this command')
+        return
+
+    ip = get_wan_ip()
+    await message.answer(
+        md.text('Your WAN IP address  \- ', md.code(ip)),
+        parse_mode=ParseMode.MARKDOWN_V2
+    )
 
 
 if __name__ == '__main__':

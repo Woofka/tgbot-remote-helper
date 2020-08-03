@@ -2,14 +2,13 @@ import asyncio
 import socket
 import re
 import binascii
-import subprocess
 from protocol import Protocol
 import datetime
-import time
 import logging
 import os
+import requests
 
-from config import LOG_ID
+from config import LOG_ID, IP, MAC
 
 
 log = logging.getLogger('logger')
@@ -24,10 +23,27 @@ STATUS_FILE_NAME = 'status.info'
 STATUS_MAX_UNCHANGED = 15
 
 
+WAN_IP_SITES = [
+    'checkip.amazonaws.com',
+    'api.ipify.org',
+    'ifconfig.me',
+    'icanhazip.com',
+    'ipecho.net/plain',
+]
+
+
 sock_proto = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-sock_proto.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock_proto.bind(('', PROTO_PORT_CLIENT))
 sock_proto.settimeout(0.001)
+
+
+def get_wan_ip():
+    for site in WAN_IP_SITES:
+        try:
+            ip = requests.get(f'https://{site}').text.strip()
+            return ip
+        except Exception as err:
+            log.error(f'[get_wan_ip] {site}: {err}')
 
 
 def _mac_bytes_to_str(_bytes, sep=':'):
@@ -43,41 +59,20 @@ def _parse_mac_addr(msg_args):
     return None
 
 
-def _correct_mac(mac_addr, sep='-'):  # windows: sep='-'
-    mac = _parse_mac_addr(mac_addr)
-    return _mac_bytes_to_str(mac, sep=sep)
-
-
 def _form_magic_packet(b_mac_addr):
     packet = b'\xff'*6 + b_mac_addr*16
     return packet
 
 
-def wake_on_lan(mac_addr):
-    b_mac_addr = _parse_mac_addr(mac_addr)
+def wake_on_lan():
+    b_mac_addr = _parse_mac_addr(MAC)
     packet = _form_magic_packet(b_mac_addr)
     sock_proto.sendto(packet, (BCAST, WAKEONLAN_PORT))
 
 
-def ask_uptime(mac_addr, user_id, chat_id):
-    ip = _get_lan_ip(mac_addr)
-    if ip is not None:
-        packet = Protocol(Protocol.CODE_ASKSTARTTIME, user_id, chat_id).encode()
-        sock_proto.sendto(packet, (ip, PROTO_PORT_SERVER))
-        return True
-    else:
-        return False
-
-
-def _get_lan_ip(mac_addr):
-    mac_addr = _correct_mac(mac_addr)
-    cmd_res = subprocess.run(['arp', '-a'], stdout=subprocess.PIPE)
-    # cmd_res = cmd_res.stdout.decode('UTF-8')
-    cmd_res = cmd_res.stdout.decode('cp866')  # windows
-    for s in cmd_res.split('\n'):
-        if mac_addr in s:
-            ip = re.findall(r'(\d{1,3}(?:\.\d{1,3}){3})', s)[0]
-            return ip
+def ask_uptime(user_id, chat_id):
+    packet = Protocol(Protocol.CODE_ASKSTARTTIME, user_id, chat_id).encode()
+    sock_proto.sendto(packet, (IP, PROTO_PORT_SERVER))
 
 
 def get_last_status():
@@ -110,8 +105,9 @@ async def protocol_handler(bot):
 
             if packet.code == Protocol.CODE_STARTTIME:
                 startup_time = datetime.datetime.fromisoformat(packet.payload)
-                await bot.send_message(packet.cid, f'[WorkInProgress] Startup time: {startup_time}')
-                # TODO handle this info in the way I want
+                stup_time = startup_time.__format__('%H:%M:%S %d %h %Y')
+                up_time = datetime.datetime.now()-startup_time
+                await bot.send_message(packet.cid, f'System uptime: {up_time}. Startup time: {stup_time}')
         except socket.timeout:
             await asyncio.sleep(0.01)
         except Exception as err:
@@ -126,10 +122,12 @@ def _handle_status(status, timestamp):
         _update_status(status, timestamp)
         if status == last_status and diff < STATUS_MAX_UNCHANGED:  # still online
             return None
+        log.info('Device became online')
         return True  # now it's online, but was offline before
 
     if status != last_status and diff > STATUS_MAX_UNCHANGED:  # it probably became offline
         _update_status(status, last_response)
+        log.info('Device became offline')
         return False
     return None  # still offline
 
@@ -138,7 +136,7 @@ async def status_observer(bot):
     await asyncio.sleep(3)  # wait for bot start
     packet = Protocol(Protocol.CODE_IFALIVE, 0, 0).encode()
     while True:
-        sock_proto.sendto(packet, (BCAST, PROTO_PORT_SERVER))
+        sock_proto.sendto(packet, (IP, PROTO_PORT_SERVER))
         status_info = _handle_status(False, datetime.datetime.now().timestamp())
         if status_info is False:
             await bot.send_message(LOG_ID, '[INFO] Device is probably offline now')
