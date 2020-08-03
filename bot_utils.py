@@ -82,6 +82,7 @@ def get_last_status():
             status = (statuses[0].replace('\n', '') == 'True')
             return status, float(statuses[1])  # last status, last response time
     else:
+        _update_status(False, 0.0)
         return False, 0.0
 
 
