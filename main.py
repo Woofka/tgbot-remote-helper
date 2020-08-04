@@ -60,62 +60,74 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='wakeonlan')
 async def cmd_wakeonlan(message: types.Message):
-    log.info(f'Command \"/wakeonlan\" from user {message.from_user.id}')
+    try:
+        log.info(f'Command \"/wakeonlan\" from user {message.from_user.id}')
 
-    if message.from_user.id not in ALLOWED_IDS:
-        await message.answer('Sorry. You have no permission to use this command')
-        return
+        if message.from_user.id not in ALLOWED_IDS:
+            await message.answer('Sorry. You have no permission to use this command')
+            return
 
-    status, _ = get_last_status()
-    if not status:
-        wake_on_lan()
-        await message.answer('Wake-on-LAN packet was sent')
-    else:
-        await message.answer('Device is already online')
+        status, _ = get_last_status()
+        if not status:
+            wake_on_lan()
+            await message.answer('Wake-on-LAN packet was sent')
+        else:
+            await message.answer('Device is already online')
+    except Exception as err:
+        log.error(f'[/wakeonlan] {err}')
 
 
 @dp.message_handler(commands='uptime')
 async def cmd_uptime(message: types.Message):
-    log.info(f'Command \"/uptime\" from user {message.from_user.id}')
+    try:
+        log.info(f'Command \"/uptime\" from user {message.from_user.id}')
 
-    if message.from_user.id not in ALLOWED_IDS:
-        await message.answer('Sorry. You have no permission to use this command')
-        return
+        if message.from_user.id not in ALLOWED_IDS:
+            await message.answer('Sorry. You have no permission to use this command')
+            return
 
-    status, _ = get_last_status()
-    if status:
-        ask_uptime(message.from_user.id, message.chat.id)
-    else:
-        await message.answer('Device is offline')
+        status, _ = get_last_status()
+        if status:
+            ask_uptime(message.from_user.id, message.chat.id)
+        else:
+            await message.answer('Device is offline')
+    except Exception as err:
+        log.error(f'[/uptime] {err}')
 
 
 @dp.message_handler(commands='status')
 async def cmd_status(message: types.Message):
-    log.info(f'Command \"/status\" from user {message.from_user.id}')
+    try:
+        log.info(f'Command \"/status\" from user {message.from_user.id}')
 
-    if message.from_user.id not in ALLOWED_IDS:
-        await message.answer('Sorry. You have no permission to use this command')
-        return
+        if message.from_user.id not in ALLOWED_IDS:
+            await message.answer('Sorry. You have no permission to use this command')
+            return
 
-    status, time = get_last_status()
-    info = 'ONLINE' if status else 'OFFLINE'
-    time = datetime.datetime.fromtimestamp(time).__format__('%H:%M:%S  %d %h %Y')
-    await message.answer(f'Last known status  -  {info}  -  {time}')
+        status, time = get_last_status()
+        info = 'ONLINE' if status else 'OFFLINE'
+        time = datetime.datetime.fromtimestamp(time).__format__('%H:%M:%S  %d %h %Y')
+        await message.answer(f'Last known status  -  {info}  -  {time}')
+    except Exception as err:
+        log.error(f'[/status] {err}')
 
 
 @dp.message_handler(commands='wanip')
 async def cmd_wanip(message: types.Message):
-    log.info(f'Command \"/wanip\" from user {message.from_user.id}')
+    try:
+        log.info(f'Command \"/wanip\" from user {message.from_user.id}')
 
-    if message.from_user.id not in ALLOWED_IDS:
-        await message.answer('Sorry. You have no permission to use this command')
-        return
+        if message.from_user.id not in ALLOWED_IDS:
+            await message.answer('Sorry. You have no permission to use this command')
+            return
 
-    ip = get_wan_ip()
-    await message.answer(
-        md.text('Your WAN IP address  \- ', md.code(ip)),
-        parse_mode=ParseMode.MARKDOWN_V2
-    )
+        ip = get_wan_ip()
+        await message.answer(
+            md.text('Your WAN IP address  \- ', md.code(ip)),
+            parse_mode=ParseMode.MARKDOWN_V2
+        )
+    except Exception as err:
+        log.error(f'[/wanip] {err}')
 
 
 if __name__ == '__main__':
