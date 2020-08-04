@@ -107,9 +107,14 @@ async def protocol_handler(bot):
 
             if packet.code == Protocol.CODE_STARTTIME:
                 startup_time = datetime.datetime.fromisoformat(packet.payload)
-                stup_time = startup_time.__format__('%H:%M:%S %d %h %Y')
-                up_time = datetime.datetime.now()-startup_time
-                await bot.send_message(packet.cid, f'System uptime: {up_time}. Startup time: {stup_time}')
+                time = startup_time.__format__('%H:%M:%S')
+                date = startup_time.__format__('%d %h %Y')
+                up_time = str(datetime.datetime.now()-startup_time)
+                for i, s in enumerate(up_time[::-1]):
+                    if s == '.':
+                        up_time = up_time[:-i - 1]
+                        break
+                await bot.send_message(packet.cid, f'System uptime: {up_time}\nStartup time:  {time}  -  {date}')
         except socket.timeout:
             await asyncio.sleep(0.01)
         except Exception as err:

@@ -104,10 +104,12 @@ async def cmd_status(message: types.Message):
             await message.answer('Sorry. You have no permission to use this command')
             return
 
-        status, time = get_last_status()
+        status, dt = get_last_status()
         info = 'ONLINE' if status else 'OFFLINE'
-        time = datetime.datetime.fromtimestamp(time).__format__('%H:%M:%S  %d %h %Y')
-        await message.answer(f'Last known status  -  {info}  -  {time}')
+        dt = datetime.datetime.fromtimestamp(dt)
+        time = dt.__format__('%H:%M:%S')
+        date = dt.__format__('%d %h %Y')
+        await message.answer(f'Last known status:\n{info}  -  {time}  -  {date}')
     except Exception as err:
         log.error(f'[/status] {err}')
 
