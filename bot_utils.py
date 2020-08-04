@@ -33,6 +33,7 @@ WAN_IP_SITES = [
 
 
 sock_proto = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+sock_proto.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock_proto.bind(('', PROTO_PORT_CLIENT))
 sock_proto.settimeout(0.001)
 
