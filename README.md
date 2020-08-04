@@ -7,4 +7,4 @@ Go to project directory:
 Build a Docker image:  
 ``docker build -t tgbot-remote-helper .``  
 Run a Docker container:  
-``docker run --name tgbot-1 --privileged --restart always -p 10788:10788/udp -p 10789:10789/udp -v "<path-to-project-directory>:/app" tgbot-remote-helper -u main.py``
+``docker run --name tgbot-remote-helper --privileged --restart always -p 10788:10788/udp -p 10789:10789/udp -v "<path-to-project-directory>:/app" tgbot-remote-helper -u main.py``
